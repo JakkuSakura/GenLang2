@@ -12,7 +12,7 @@ This time, the goals are:
 ```text
 number = [0-9]+
 identifier = [_a-zA-Z][-0-9a-zA-Z]*
-
+bracket = [()[]{}]
 ```
 ## Grammars
 ```text
