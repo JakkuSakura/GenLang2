@@ -1,3 +1,4 @@
+import scala.collection.immutable
 import scala.collection.mutable.ArrayBuffer
 
 class Lexer(source: String) {
@@ -19,11 +20,17 @@ class Lexer(source: String) {
     }
   }
 
-  def tryReadNext(): Option[Char] = {
-    val ch = tryGetNext()
-    advance(ch)
-    ch
+  def tryReadNext(): Option[Char] = tryReadNext(_ => true)
+
+
+  def tryReadNext(cond: Char => Boolean): Option[Char] = {
+    val ch = tryGetNext().filter(cond)
+    ch match {
+      case Some(ch) => advance(Some(ch)); Some(ch)
+      case None => None
+    }
   }
+
 
   def tryGetNext(): Option[Char] = {
     if (ptr < source.length()) {
@@ -35,15 +42,15 @@ class Lexer(source: String) {
 
   // identifier = [_a-zA-Z][-0-9a-zA-Z]*
   def tryParseIdentifier(): Option[IdentifierToken] = {
-    var buf = new StringBuilder()
 
-    if (!tryGetNext().exists(ch => ch == '_' || 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'))
+    if (!tryGetNext().exists(ch => ch == '_' || ch.isLetter))
       return None
-
+    val col = this.col;
+    val buf = new StringBuilder()
     while (tryGetNext().isDefined) {
       val next = tryGetNext()
       next match {
-        case Some(ch) if ch == '_' || '0' <= ch && ch <= '9' || 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' =>
+        case Some(ch) if ch == '_' || ch.isLetterOrDigit =>
           buf.append(ch)
           tryReadNext()
         case _ => return Some(new IdentifierToken(new Position(row, col), buf.toString()))
@@ -54,17 +61,19 @@ class Lexer(source: String) {
 
   // number = [0-9]+
   def tryParseNumeric(): Option[NumericToken] = {
-    var buf = new StringBuilder()
-    if (tryGetNext().isEmpty)
+    if (!tryGetNext().exists(Character.isDigit))
       return None
+
+    val col = this.col;
+    val buf = new StringBuilder()
     while (true) {
       val next = tryGetNext()
       next match {
-        case Some(ch) if '0' <= ch && ch <= '9' =>
+        case Some(ch) if ch.isDigit =>
           buf.append(ch)
           tryReadNext()
 
-        case _ => return Some(new NumericToken(new Position(row, col - buf.length), buf.toString()))
+        case _ => return Some(new NumericToken(new Position(row, col), buf.toString()))
       }
     }
     None
@@ -72,16 +81,24 @@ class Lexer(source: String) {
 
   //  bracket = [()[]{}]
   def tryParseBracket(): Option[BracketToken] = {
+    val col = this.col;
     tryGetNext()
       .filter(x => x == '(' || x == ')')
-      .map(x => new BracketToken(new Position(row, col), x.toString))
+      .map(x => {
+        tryReadNext()
+        new BracketToken(new Position(row, col), x.toString)
+      })
   }
 
   def omitWhiteSpace(): Unit = {
-    while (tryGetNext().isDefined) {
-      if (!java.lang.Character.isWhitespace(tryGetNext().get))
-        return
+    while (tryReadNext(Character.isWhitespace).isDefined) {
+
     }
+  }
+
+  def tryParseSemicolon(): Option[SemicolonToken] = {
+    val col = this.col
+    tryReadNext(ch => ch == ';').map(_ => new SemicolonToken(new Position(row, col)))
   }
 
   def tryMatch(): Option[Token] = {
@@ -99,10 +116,14 @@ class Lexer(source: String) {
       case Some(x) => return Some(x)
       case None =>
     }
+    tryParseSemicolon() match {
+      case Some(x) => return Some(x)
+      case None =>
+    }
     None
   }
 
-  def doLexer(): Array[Token] = {
+  def doLexer(): immutable.Seq[Token] = {
     var tokens = new ArrayBuffer[Token]()
     while (tryGetNext().isDefined) {
       tryMatch() match {
@@ -111,6 +132,6 @@ class Lexer(source: String) {
       }
     }
 
-    tokens.toArray
+    tokens.toSeq
   }
 }

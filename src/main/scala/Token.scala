@@ -18,4 +18,7 @@ class BracketToken(override val pos: Position, val value: String) extends Token(
   override def toString: String = this.getClass.getSimpleName + "(" + value + ")" + pos
 }
 
+class SemicolonToken(override val pos: Position) extends Token(pos) {
+  override def toString: String = this.getClass.getSimpleName + pos
+}
 
