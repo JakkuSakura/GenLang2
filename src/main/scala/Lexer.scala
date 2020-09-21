@@ -35,7 +35,7 @@ class Lexer(source: String) {
 
   // identifier = [_a-zA-Z][-0-9a-zA-Z]*
   def tryParseIdentifier(): Option[IdentifierToken] = {
-    var buf = ""
+    var buf = new StringBuilder()
 
     if (!tryGetNext().exists(ch => ch == '_' || 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'))
       return None
@@ -44,9 +44,9 @@ class Lexer(source: String) {
       val next = tryGetNext()
       next match {
         case Some(ch) if ch == '_' || '0' <= ch && ch <= '9' || 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' =>
-          buf += ch
+          buf.append(ch)
           tryReadNext()
-        case _ => return Some(new IdentifierToken(new Position(row, col), buf))
+        case _ => return Some(new IdentifierToken(new Position(row, col), buf.toString()))
       }
     }
     None
@@ -54,17 +54,17 @@ class Lexer(source: String) {
 
   // number = [0-9]+
   def tryParseNumeric(): Option[NumericToken] = {
-    var buf = ""
+    var buf = new StringBuilder()
     if (tryGetNext().isEmpty)
       return None
     while (true) {
       val next = tryGetNext()
       next match {
         case Some(ch) if '0' <= ch && ch <= '9' =>
-          buf += ch
+          buf.append(ch)
           tryReadNext()
 
-        case _ => return Some(new NumericToken(new Position(row, col - buf.length), buf))
+        case _ => return Some(new NumericToken(new Position(row, col - buf.length), buf.toString()))
       }
     }
     None
